@@ -1,0 +1,20 @@
+[workspace]
+resolver = "2"
+
+default-members = ["cli"]
+members = ["api", "cli"]
+
+[workspace.package]
+authors = ["Reid Hansen"]
+version = "0.1.0"
+edition = "2021"
+
+
+[workspace.dependencies]
+anyhow = "1.0.76"
+clap = { version = "4.4.11", features = ["derive", "env", "string"] }
+reqwest = { version = "0.11", features = ["json"] }
+serde = { version = "1.0.193", features = ["derive"] }
+serde_json = "1.0"
+tokio = { version = "1", features = ["full"] }
+toml = "0.8.8"

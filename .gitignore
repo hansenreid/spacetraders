@@ -1,0 +1,16 @@
+# Editor .ignore files
+.ignore
+
+# Environment Variables
+.env
+
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Added by cargo
+
+/target
