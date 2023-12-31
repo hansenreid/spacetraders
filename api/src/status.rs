@@ -1,4 +1,4 @@
-use anyhow::{Context, Ok, Result};
+use eyre::{WrapErr, Ok, Result};
 use serde::{Deserialize, Serialize};
 
 use crate::ApiConfig;
@@ -23,12 +23,12 @@ struct Stats {
 pub async fn get(config: ApiConfig) -> Result<Status> {
     let status = reqwest::get(config.base_url)
         .await
-        .context("Failed to call status endpoint")?
+        .wrap_err("Failed to call status endpoint")?
         .error_for_status()
-        .context("Status endpoint returned error response")?
+        .wrap_err("Status endpoint returned error response")?
         .json::<Status>()
         .await
-        .context("Failed to deserialize status response")?;
+        .wrap_err("Failed to deserialize status response")?;
 
     Ok(status)
 }
