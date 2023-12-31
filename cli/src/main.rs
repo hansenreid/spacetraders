@@ -1,9 +1,9 @@
 use std::fs;
 use std::path::Path;
 
-use api::register::RegisterResponse;
 use clap::Parser;
 use eyre::{Ok, Result};
+use openapi::{apis, models};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Parser)]
@@ -38,18 +38,21 @@ async fn main() -> Result<()> {
     color_eyre::install()?;
 
     let config: Config = clap::Parser::parse();
-    let api_config = api::ApiConfig::new("https://api.spacetraders.io/v2".into());
     let _agent_config = get_conf();
+    let conf = apis::configuration::Configuration::new();
 
     match config.command {
         Some(Command::Status) => {
-            let resp = api::status::get(api_config).await?;
-            println!("Status: {:?}", resp)
+            let openapi_response = apis::default_api::get_status(&conf).await?;
+            println!("{:#?}", openapi_response);
         }
 
         Some(Command::Register(args)) => {
-            let req = api::register::RegisterRequest::new(args.faction, args.symbol);
-            let res = api::register::register(api_config, req).await?;
+            let faction = models::FactionSymbol::Cosmic;
+            let symbol = args.symbol.clone();
+            let req = models::RegisterRequest::new(faction, symbol);
+            let res = apis::default_api::register(&conf, Some(req)).await?;
+
             write_conf(res)?;
 
             println!("Registered successfully. Agent file has been updated")
@@ -75,7 +78,7 @@ fn get_conf() -> Result<Option<AgentConfig>> {
     }
 }
 
-fn write_conf(res: RegisterResponse) -> Result<()> {
+fn write_conf(res: models::Register201Response) -> Result<()> {
     let file = Path::new("agent.toml");
     let agent_config = AgentConfig {
         token: res.data.token,

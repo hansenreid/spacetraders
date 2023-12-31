@@ -66,17 +66,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "api"
-version = "0.1.0"
-dependencies = [
- "eyre",
- "reqwest",
- "serde",
- "serde_json",
- "tokio",
-]
-
-[[package]]
 name = "autocfg"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -186,10 +175,10 @@ checksum = "702fc72eb24e5a1e48ce58027a675bc24edd52096d5397d4aea7c6dd9eca0bd1"
 name = "cli"
 version = "0.1.0"
 dependencies = [
- "api",
  "clap",
  "color-eyre",
  "eyre",
+ "openapi",
  "serde",
  "serde_json",
  "tokio",
@@ -353,6 +342,17 @@ dependencies = [
  "futures-task",
  "pin-project-lite",
  "pin-utils",
+]
+
+[[package]]
+name = "getrandom"
+version = "0.2.11"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fe9006bed769170c11f845cf00c7c1e9092aeb3f268e007c3e760ac68008070f"
+dependencies = [
+ "cfg-if",
+ "libc",
+ "wasi",
 ]
 
 [[package]]
@@ -563,6 +563,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6877bb514081ee2a7ff5ef9de3281f14a4dd4bceac4c09388074a6b5df8a139a"
 
 [[package]]
+name = "mime_guess"
+version = "2.0.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4192263c238a5f0d0c6bfd21f336a313a4ce1c450542449ca191bb657b4642ef"
+dependencies = [
+ "mime",
+ "unicase",
+]
+
+[[package]]
 name = "miniz_oxide"
 version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -624,6 +634,18 @@ name = "once_cell"
 version = "1.19.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3fdb12b2476b595f9358c5161aa467c2438859caa136dec86c26fdd2efe17b92"
+
+[[package]]
+name = "openapi"
+version = "2.0.0"
+dependencies = [
+ "reqwest",
+ "serde",
+ "serde_derive",
+ "serde_json",
+ "url",
+ "uuid",
+]
 
 [[package]]
 name = "openssl"
@@ -769,6 +791,7 @@ dependencies = [
  "js-sys",
  "log",
  "mime",
+ "mime_guess",
  "native-tls",
  "once_cell",
  "percent-encoding",
@@ -1163,6 +1186,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e421abadd41a4225275504ea4d6566923418b7f05506fbc9c0fe86ba7396114b"
 
 [[package]]
+name = "unicase"
+version = "2.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f7d2d4dafb69621809a81864c9c1b864479e1235c0dd4e199924b9742439ed89"
+dependencies = [
+ "version_check",
+]
+
+[[package]]
 name = "unicode-bidi"
 version = "0.3.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1201,6 +1233,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "711b9620af191e0cdc7468a8d14e709c3dcdb115b36f838e601583af800a370a"
 
 [[package]]
+name = "uuid"
+version = "1.6.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5e395fcf16a7a3d8127ec99782007af141946b4795001f876d54fb0d55978560"
+dependencies = [
+ "getrandom",
+ "serde",
+]
+
+[[package]]
 name = "valuable"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1211,6 +1253,12 @@ name = "vcpkg"
 version = "0.2.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "accd4ea62f7bb7a82fe23066fb0957d48ef677f6eeb8215f372f52e48bb32426"
+
+[[package]]
+name = "version_check"
+version = "0.9.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "49874b5167b65d7193b8aba1567f5c7d93d001cafc34600cee003eda787e483f"
 
 [[package]]
 name = "want"
