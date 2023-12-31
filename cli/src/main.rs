@@ -1,15 +1,17 @@
 use std::path::Path;
+use std::str::FromStr;
 use std::{fs, vec};
 
 use clap::Parser;
 use eyre::{Ok, Result};
+use inquire::{Select, Text};
 use openapi::{apis, models};
 use serde::{Deserialize, Serialize};
 use tabled::Table;
 
 #[derive(Debug, Parser)]
 enum Command {
-    Register(RegisterArgs),
+    Register,
     GetAgent,
     Status,
 }
@@ -18,15 +20,6 @@ enum Command {
 struct Config {
     #[clap(subcommand)]
     command: Option<Command>,
-}
-
-#[derive(Debug, Parser)]
-struct RegisterArgs {
-    #[arg(short, long)]
-    symbol: String,
-
-    #[arg(short, long)]
-    faction: String,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -49,9 +42,14 @@ async fn main() -> Result<()> {
             println!("{:#?}", openapi_response);
         }
 
-        Some(Command::Register(args)) => {
-            let faction = models::FactionSymbol::Cosmic;
-            let symbol = args.symbol.clone();
+        Some(Command::Register) => {
+            let symbol = Text::new("What is your agent symbol?").prompt()?;
+
+            let faction_answer =
+                Select::new("Select a faction:", common::models::FactionSymbol::to_vec())
+                    .prompt()?;
+            let faction = common::models::FactionSymbol::from_str(faction_answer)?.into();
+
             let req = models::RegisterRequest::new(faction, symbol);
             let res = apis::default_api::register(&conf, Some(req)).await?;
             write_conf(&res)?;
