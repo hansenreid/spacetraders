@@ -11,8 +11,9 @@ use tabled::Table;
 
 #[derive(Debug, Parser)]
 enum Command {
-    Register,
     GetAgent,
+    GetShips,
+    Register,
     Status,
 }
 
@@ -76,6 +77,37 @@ async fn main() -> Result<()> {
                 let agent_table = vec![agent];
                 let agent_table = Table::new(agent_table).to_string();
                 println!("\n{}\n", agent_table);
+            }
+
+            None => println!("No agent found. Please register first"),
+        },
+
+        Some(Command::GetShips) => match agent_config {
+            Some(agent_config) => {
+                let api_config = get_authenticated_config(agent_config);
+                let page = 1;
+                let limit = 10;
+                let res =
+                    apis::fleet_api::get_my_ships(&api_config, Some(page), Some(limit)).await?;
+
+                let mut ships = res.data.into_iter()
+                    .map(|ship| common::models::Ship::from(ship)).collect::<Vec<common::models::Ship>>();
+
+                let total = res.meta.total;
+                let num_pages = (total as f32 / limit as f32).ceil() as i32;
+
+                for n in (page + 1)..=num_pages {
+                    let res =
+                        apis::fleet_api::get_my_ships(&api_config, Some(n), Some(limit)).await?;
+                    for s in res.data {
+                        let ship = common::models::Ship::from(s);
+                        
+                        ships.push(ship)
+                    }
+                }
+
+                let ship_table = Table::new(ships).to_string();
+                println!("\n{}\n", ship_table)
             }
 
             None => println!("No agent found. Please register first"),
