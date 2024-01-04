@@ -12,6 +12,7 @@ use tabled::Table;
 #[derive(Debug, Parser)]
 enum Command {
     GetAgent,
+    Step,
     GetShips,
     Register,
     Status,
@@ -70,7 +71,7 @@ async fn main() -> Result<()> {
 
         Some(Command::GetAgent) => match agent_config {
             Some(agent_config) => {
-                let api_config = get_authenticated_config(agent_config);
+                let api_config = get_authenticated_config(agent_config.token);
                 let res = apis::agents_api::get_my_agent(&api_config).await?;
 
                 let agent = common::models::Agent::from(res.data);
@@ -84,14 +85,17 @@ async fn main() -> Result<()> {
 
         Some(Command::GetShips) => match agent_config {
             Some(agent_config) => {
-                let api_config = get_authenticated_config(agent_config);
+                let api_config = get_authenticated_config(agent_config.token);
                 let page = 1;
                 let limit = 10;
                 let res =
                     apis::fleet_api::get_my_ships(&api_config, Some(page), Some(limit)).await?;
 
-                let mut ships = res.data.into_iter()
-                    .map(|ship| common::models::Ship::from(ship)).collect::<Vec<common::models::Ship>>();
+                let mut ships = res
+                    .data
+                    .into_iter()
+                    .map(|ship| common::models::Ship::from(ship))
+                    .collect::<Vec<common::models::Ship>>();
 
                 let total = res.meta.total;
                 let num_pages = (total as f32 / limit as f32).ceil() as i32;
@@ -101,7 +105,7 @@ async fn main() -> Result<()> {
                         apis::fleet_api::get_my_ships(&api_config, Some(n), Some(limit)).await?;
                     for s in res.data {
                         let ship = common::models::Ship::from(s);
-                        
+
                         ships.push(ship)
                     }
                 }
@@ -110,6 +114,21 @@ async fn main() -> Result<()> {
                 println!("\n{}\n", ship_table)
             }
 
+            None => println!("No agent found. Please register first"),
+        },
+
+        Some(Command::Step) => match agent_config {
+            Some(agent_config) => {
+                let api_config = get_authenticated_config(agent_config.token);
+                let location = common::models::Location::from_str("X1-GQ23-A1")?;
+                let machine = common::machines::TravelMachineWrapper::new(
+                    api_config,
+                    location,
+                    "NATINGAR2-3",
+                )
+                .await?;
+                machine.step().await?;
+            }
             None => println!("No agent found. Please register first"),
         },
 
@@ -133,9 +152,9 @@ fn get_conf() -> Result<Option<AgentConfig>> {
     }
 }
 
-fn get_authenticated_config(agent_config: AgentConfig) -> apis::configuration::Configuration {
+fn get_authenticated_config(bearer_token: String) -> apis::configuration::Configuration {
     apis::configuration::Configuration {
-        bearer_access_token: Some(agent_config.token),
+        bearer_access_token: Some(bearer_token),
         ..Default::default()
     }
 }

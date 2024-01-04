@@ -15,6 +15,12 @@ pub struct Ship {
     pub nav: ShipNav,
 }
 
+impl From<Box<openapi::models::Ship>> for Ship {
+    fn from(value: Box<openapi::models::Ship>) -> Self {
+        Ship::from(*value)
+    }
+}
+
 impl From<openapi::models::Ship> for Ship {
     fn from(value: openapi::models::Ship) -> Self {
         Self {
@@ -22,6 +28,12 @@ impl From<openapi::models::Ship> for Ship {
             registration: ShipRegistration::from(value.registration),
             nav: ShipNav::from(value.nav),
         }
+    }
+}
+
+impl Ship {
+    pub fn update_nav(&mut self, nav: ShipNav) {
+        self.nav = nav;
     }
 }
 
@@ -46,12 +58,14 @@ impl From<Box<openapi::models::ShipRegistration>> for ShipRegistration {
 // TODO: Finish implementation
 pub struct ShipNav {
     pub location: Location,
+    pub status: ShipNavStatus,
 }
 
 impl From<Box<openapi::models::ShipNav>> for ShipNav {
     fn from(value: Box<openapi::models::ShipNav>) -> Self {
         Self {
             location: Location::parse(value.waypoint_symbol),
+            status: value.status.into(),
         }
     }
 }
@@ -140,5 +154,34 @@ impl FromStr for ShipRole {
 
             _ => Err(eyre::eyre!("Unkown Ship Role")),
         }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Tabled)]
+pub enum ShipNavStatus {
+    InTransit,
+    InOrbit,
+    Docked,
+}
+
+impl From<openapi::models::ShipNavStatus> for ShipNavStatus {
+    fn from(value: openapi::models::ShipNavStatus) -> Self {
+        match value {
+            openapi::models::ShipNavStatus::InTransit => Self::InTransit,
+            openapi::models::ShipNavStatus::InOrbit => Self::InOrbit,
+            openapi::models::ShipNavStatus::Docked => Self::Docked,
+        }
+    }
+}
+
+impl Display for ShipNavStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let string = match self {
+            ShipNavStatus::InTransit => "IN_TRANSIT",
+            ShipNavStatus::InOrbit => "IN_ORBIT",
+            ShipNavStatus::Docked => "DOCKED",
+        };
+
+        write!(f, "{}", string)
     }
 }
