@@ -120,14 +120,22 @@ async fn main() -> Result<()> {
         Some(Command::Step) => match agent_config {
             Some(agent_config) => {
                 let api_config = get_authenticated_config(agent_config.token);
-                let location = common::models::Location::from_str("X1-GQ23-A1")?;
-                let machine = common::machines::TravelMachineWrapper::new(
-                    api_config,
-                    location,
-                    "NATINGAR2-3",
-                )
-                .await?;
-                machine.step().await?;
+                let dest = common::models::Location::from_str("X1-GQ23-H45")?;
+                let mut machine =
+                    common::machines::TravelMachineWrapper::new(api_config, dest, "NATINGAR2-3")
+                        .await?;
+
+                loop {
+                    match machine {
+                        common::machines::TravelMachineWrapper::TravelComplete => {
+                            println!("Travel has been completed!");
+                            break;
+                        }
+                        _ => {
+                            machine = machine.step().await?;
+                        }
+                    }
+                }
             }
             None => println!("No agent found. Please register first"),
         },

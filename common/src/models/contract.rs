@@ -2,7 +2,7 @@ use core::panic;
 use serde::{Deserialize, Serialize};
 use tabled::Tabled;
 use time::format_description::well_known::Iso8601;
-use time::PrimitiveDateTime;
+use time::OffsetDateTime;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Tabled)]
 pub struct Contract {
@@ -15,15 +15,15 @@ pub struct Contract {
     // pub terms: Box<crate::models::ContractTerms>,
     pub accepted: bool,
     pub fulfilled: bool,
-    pub expiration: PrimitiveDateTime,
+    pub expiration: OffsetDateTime,
 
     #[tabled(display_with = "super::display_option")]
-    pub deadline_to_accept: Option<PrimitiveDateTime>,
+    pub deadline_to_accept: Option<OffsetDateTime>,
 }
 
 impl From<Box<openapi::models::Contract>> for Contract {
     fn from(value: Box<openapi::models::Contract>) -> Self {
-        let expiration = PrimitiveDateTime::parse(value.expiration.as_str(), &Iso8601::DEFAULT);
+        let expiration = OffsetDateTime::parse(value.expiration.as_str(), &Iso8601::DEFAULT);
         let expiration = match expiration {
             Ok(date) => date,
             Err(e) => {
@@ -34,7 +34,7 @@ impl From<Box<openapi::models::Contract>> for Contract {
 
         let deadline_to_accept = match value.deadline_to_accept {
             Some(date) => {
-                let date = PrimitiveDateTime::parse(date.as_str(), &Iso8601::DEFAULT);
+                let date = OffsetDateTime::parse(date.as_str(), &Iso8601::DEFAULT);
                 match date {
                     Ok(date) => Some(date),
                     Err(e) => {

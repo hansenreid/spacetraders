@@ -2,6 +2,8 @@ use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use std::str::FromStr;
 use tabled::Tabled;
+use time::format_description::well_known::Iso8601;
+use time::{Duration, OffsetDateTime};
 
 use super::{FactionSymbol, Location};
 
@@ -13,6 +15,10 @@ pub struct Ship {
     pub registration: ShipRegistration,
     #[tabled(inline)]
     pub nav: ShipNav,
+    #[tabled(inline)]
+    pub cargo: ShipCargo,
+    #[tabled(inline)]
+    pub fuel: ShipFuel,
 }
 
 impl From<Box<openapi::models::Ship>> for Ship {
@@ -27,6 +33,8 @@ impl From<openapi::models::Ship> for Ship {
             symbol: value.symbol,
             registration: ShipRegistration::from(value.registration),
             nav: ShipNav::from(value.nav),
+            cargo: ShipCargo::from(value.cargo),
+            fuel: ShipFuel::from(value.fuel),
         }
     }
 }
@@ -59,6 +67,9 @@ impl From<Box<openapi::models::ShipRegistration>> for ShipRegistration {
 pub struct ShipNav {
     pub location: Location,
     pub status: ShipNavStatus,
+    pub flight_mode: ShipNavFlightMode,
+    #[tabled(inline)]
+    pub route: ShipNavRoute,
 }
 
 impl From<Box<openapi::models::ShipNav>> for ShipNav {
@@ -66,7 +77,183 @@ impl From<Box<openapi::models::ShipNav>> for ShipNav {
         Self {
             location: Location::parse(value.waypoint_symbol),
             status: value.status.into(),
+            flight_mode: value.flight_mode.into(),
+            route: value.route.into(),
         }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Tabled)]
+pub enum ShipNavFlightMode {
+    Drift,
+    Stealth,
+    Cruise,
+    Burn,
+}
+
+impl From<openapi::models::ShipNavFlightMode> for ShipNavFlightMode {
+    fn from(value: openapi::models::ShipNavFlightMode) -> Self {
+        match value {
+            openapi::models::ShipNavFlightMode::Drift => Self::Drift,
+            openapi::models::ShipNavFlightMode::Stealth => Self::Stealth,
+            openapi::models::ShipNavFlightMode::Cruise => Self::Cruise,
+            openapi::models::ShipNavFlightMode::Burn => Self::Burn,
+        }
+    }
+}
+
+impl Display for ShipNavFlightMode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let string = match self {
+            ShipNavFlightMode::Drift => "DRIFT",
+            ShipNavFlightMode::Stealth => "STEALTH",
+            ShipNavFlightMode::Cruise => "CRUISE",
+            ShipNavFlightMode::Burn => "BURN",
+        };
+
+        write!(f, "{}", string)
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Tabled)]
+pub struct ShipNavRoute {
+    #[tabled(display_with = "super::display_option")]
+    pub time_to_arrival: Option<Duration>,
+
+    #[tabled(inline)]
+    pub destination: ShipNavRouteWayPoint,
+    #[tabled(skip)]
+    pub origin: ShipNavRouteWayPoint,
+    #[tabled(skip)]
+    pub arrival: OffsetDateTime,
+    #[tabled(skip)]
+    pub departure_time: OffsetDateTime,
+}
+
+impl From<Box<openapi::models::ShipNavRoute>> for ShipNavRoute {
+    fn from(value: Box<openapi::models::ShipNavRoute>) -> Self {
+        let arrival = OffsetDateTime::parse(value.arrival.as_str(), &Iso8601::DEFAULT);
+        let arrival = match arrival {
+            Ok(date) => date,
+            Err(e) => {
+                println!("Error formatting date: {:?}", e);
+                panic!()
+            }
+        };
+
+        let departure_time =
+            OffsetDateTime::parse(value.departure_time.as_str(), &Iso8601::DEFAULT);
+        let departure_time = match departure_time {
+            Ok(date) => date,
+            Err(e) => {
+                println!("Error formatting date: {:?}", e);
+                panic!()
+            }
+        };
+
+        let now = OffsetDateTime::now_utc();
+        let diff = arrival - now;
+        let time_to_arrival = match Duration::is_negative(diff) {
+            true => None,
+            false => Some(diff),
+        };
+
+        Self {
+            time_to_arrival,
+            arrival,
+            departure_time,
+            destination: value.destination.into(),
+            origin: value.origin.into(),
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Tabled)]
+pub struct ShipNavRouteWayPoint {
+    #[tabled(rename = "Destination")]
+    pub location: Location,
+
+    #[tabled(rename = "Destination Type")]
+    pub waypoint_type: WaypointType,
+
+    #[tabled(skip)]
+    pub x: i32,
+    #[tabled(skip)]
+    pub y: i32,
+}
+
+impl From<Box<openapi::models::ShipNavRouteWaypoint>> for ShipNavRouteWayPoint {
+    fn from(value: Box<openapi::models::ShipNavRouteWaypoint>) -> Self {
+        let location = Location::parse(value.symbol);
+
+        Self {
+            location,
+            waypoint_type: value.r#type.into(),
+            x: value.x,
+            y: value.y,
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Tabled)]
+pub enum WaypointType {
+    Planet,
+    GasGiant,
+    Moon,
+    OrbitalStation,
+    JumpGate,
+    AsteroidField,
+    Asteroid,
+    EngineeredAsteroid,
+    AsteroidBase,
+    Nebula,
+    DebrisField,
+    GravityWell,
+    ArtificialGravityWell,
+    FuelStation,
+}
+
+impl From<openapi::models::WaypointType> for WaypointType {
+    fn from(value: openapi::models::WaypointType) -> Self {
+        match value {
+            openapi::models::WaypointType::Planet => Self::Planet,
+            openapi::models::WaypointType::GasGiant => Self::GasGiant,
+            openapi::models::WaypointType::Moon => Self::Moon,
+            openapi::models::WaypointType::OrbitalStation => Self::OrbitalStation,
+            openapi::models::WaypointType::JumpGate => Self::JumpGate,
+            openapi::models::WaypointType::AsteroidField => Self::AsteroidField,
+            openapi::models::WaypointType::Asteroid => Self::Asteroid,
+            openapi::models::WaypointType::EngineeredAsteroid => Self::EngineeredAsteroid,
+            openapi::models::WaypointType::AsteroidBase => Self::AsteroidBase,
+            openapi::models::WaypointType::Nebula => Self::Nebula,
+            openapi::models::WaypointType::DebrisField => Self::DebrisField,
+            openapi::models::WaypointType::GravityWell => Self::GravityWell,
+            openapi::models::WaypointType::ArtificialGravityWell => Self::ArtificialGravityWell,
+            openapi::models::WaypointType::FuelStation => Self::FuelStation,
+        }
+    }
+}
+
+impl Display for WaypointType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let string = match self {
+            WaypointType::Planet => "PLANET",
+            WaypointType::GasGiant => "GAS_GIANT",
+            WaypointType::Moon => "MOON",
+            WaypointType::OrbitalStation => "ORBITAL_STATION",
+            WaypointType::JumpGate => "JUMP_GATE",
+            WaypointType::AsteroidField => "ASTEROID_FIELD",
+            WaypointType::Asteroid => "ASTEROID",
+            WaypointType::EngineeredAsteroid => "ENGINEERED_ASTEROID",
+            WaypointType::AsteroidBase => "ASTEROID_BASE",
+            WaypointType::Nebula => "NEBULA",
+            WaypointType::DebrisField => "DEBRIS_FIELD",
+            WaypointType::GravityWell => "GRAVITY_WELL",
+            WaypointType::ArtificialGravityWell => "ARTIFICIAL_GRAVIY_WELL",
+            WaypointType::FuelStation => "FUEL_STATION",
+        };
+
+        write!(f, "{}", string)
     }
 }
 
@@ -183,5 +370,39 @@ impl Display for ShipNavStatus {
         };
 
         write!(f, "{}", string)
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Tabled)]
+pub struct ShipFuel {
+    #[tabled(rename = "Fuel Level")]
+    pub current: i32,
+    #[tabled(rename = "Fuel Capacity")]
+    pub capacity: i32,
+}
+
+impl From<Box<openapi::models::ShipFuel>> for ShipFuel {
+    fn from(value: Box<openapi::models::ShipFuel>) -> Self {
+        Self {
+            current: value.current,
+            capacity: value.capacity,
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Tabled)]
+pub struct ShipCargo {
+    #[tabled(rename = "Cargo Level")]
+    pub current: i32,
+    #[tabled(rename = "Cargo Capacity")]
+    pub capacity: i32,
+}
+
+impl From<Box<openapi::models::ShipCargo>> for ShipCargo {
+    fn from(value: Box<openapi::models::ShipCargo>) -> Self {
+        Self {
+            current: value.units,
+            capacity: value.capacity,
+        }
     }
 }

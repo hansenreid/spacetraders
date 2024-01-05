@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use eyre::{Context, Ok, Result};
 use openapi::apis::configuration::Configuration;
 use openapi::apis::fleet_api;
@@ -10,6 +12,7 @@ pub enum TravelMachineWrapper {
     InOrbit(TravelMachine<InOrbit>),
     InTransit(TravelMachine<InTransit>),
     Arrived(TravelMachine<Arrived>),
+    TravelComplete,
 }
 
 impl TravelMachineWrapper {
@@ -21,25 +24,33 @@ impl TravelMachineWrapper {
         let res = openapi::apis::fleet_api::get_my_ship(&config, ship_symbol).await?;
         let ship = Ship::from(res.data);
 
-        if ship.nav.location == destination && ship.nav.status == ShipNavStatus::Docked {
-            return Ok(Self::Arrived(TravelMachine::<Arrived>::new(
-                config,
-                destination,
-                ship,
-            )));
-        }
-
         match ship.nav.status {
-            crate::models::ship::ShipNavStatus::Docked => Ok(Self::Docked(
-                TravelMachine::<Docked>::new(config, destination, ship),
-            )),
+            crate::models::ship::ShipNavStatus::Docked => {
+                if ship.nav.location == destination {
+                    Ok(Self::TravelComplete)
+                } else {
+                    Ok(Self::Docked(TravelMachine::<Docked>::new(
+                        config,
+                        destination,
+                        ship,
+                    )))
+                }
+            }
 
             crate::models::ship::ShipNavStatus::InOrbit => {
-                Ok(Self::InOrbit(TravelMachine::<InOrbit>::new(
-                    config,
-                    destination,
-                    ship,
-                )))
+                if ship.nav.location == destination {
+                    Ok(Self::Arrived(TravelMachine::<Arrived>::new(
+                        config,
+                        destination,
+                        ship,
+                    )))
+                } else {
+                    Ok(Self::InOrbit(TravelMachine::<InOrbit>::new(
+                        config,
+                        destination,
+                        ship,
+                    )))
+                }
             }
 
             crate::models::ship::ShipNavStatus::InTransit => {
@@ -53,14 +64,36 @@ impl TravelMachineWrapper {
     }
 
     pub async fn step(self) -> Result<Self> {
-        let next = match self {
-            TravelMachineWrapper::Docked(val) => TravelMachineWrapper::InOrbit(val.undock().await?),
-            TravelMachineWrapper::InOrbit(val) => TravelMachineWrapper::Docked(val.dock().await?),
-            TravelMachineWrapper::InTransit(_) => todo!(),
-            TravelMachineWrapper::Arrived(_) => todo!(),
-        };
+        tokio::time::sleep(Duration::from_millis(5000)).await;
+        match self {
+            TravelMachineWrapper::Docked(val) => {
+                if val.destination == val.ship.nav.location {
+                    Ok(TravelMachineWrapper::TravelComplete)
+                } else {
+                    Ok(TravelMachineWrapper::InOrbit(val.undock().await?))
+                }
+            }
 
-        Ok(next)
+            TravelMachineWrapper::InOrbit(val) => {
+                Ok(TravelMachineWrapper::InTransit(val.travel().await?))
+            }
+
+            TravelMachineWrapper::InTransit(val) => {
+                if let Some(t) = val.ship.nav.route.time_to_arrival {
+                    println!("Ship is in transit. The ship will arrive in {}", t);
+                    Ok(TravelMachineWrapper::InTransit(val))
+                } else {
+                    println!("Ship is in transit. Arrival time not available");
+                    Ok(TravelMachineWrapper::InTransit(val))
+                }
+            }
+            TravelMachineWrapper::Arrived(val) => {
+                Ok(TravelMachineWrapper::Docked(val.dock().await?))
+            }
+            TravelMachineWrapper::TravelComplete => {
+                Err(eyre::eyre!("Travel has already been completed"))
+            }
+        }
     }
 }
 
@@ -93,6 +126,7 @@ impl TravelMachine<Docked> {
         }
 
         self.ship.update_nav(ship_nav);
+        println!("Ship undocked");
 
         Ok(TravelMachine::<InOrbit>::new(
             self.config,
@@ -113,19 +147,35 @@ impl TravelMachine<InOrbit> {
         }
     }
 
-    pub async fn dock(mut self) -> Result<TravelMachine<Docked>> {
-        let res = fleet_api::dock_ship(&self.config, self.ship.symbol.as_str()).await?;
-        let ship_nav = ShipNav::from(res.data.nav);
-        if ship_nav.status != ShipNavStatus::Docked {
-            return Err(eyre::eyre!("Failed to dock ship!"));
-        }
+    pub async fn travel(mut self) -> Result<TravelMachine<InTransit>> {
+        let nav = openapi::models::navigate_ship_request::NavigateShipRequest {
+            waypoint_symbol: self.destination.to_string(),
+        };
 
-        self.ship.update_nav(ship_nav);
-        Ok(TravelMachine::<Docked>::new(
-            self.config,
-            self.destination,
-            self.ship,
-        ))
+        let res =
+            fleet_api::navigate_ship(&self.config, self.ship.symbol.as_str(), Some(nav)).await;
+
+        match res {
+            std::result::Result::Ok(res) => {
+                let ship_nav = ShipNav::from(res.data.nav);
+                if ship_nav.status != ShipNavStatus::InTransit {
+                    return Err(eyre::eyre!("Failed launch ship!"));
+                }
+
+                self.ship.update_nav(ship_nav);
+                println!("Ship launched");
+
+                Ok(TravelMachine::<InTransit>::new(
+                    self.config,
+                    self.destination,
+                    self.ship,
+                ))
+            }
+            Err(e) => {
+                println!("ERROR: {:#?}", e);
+                Err(e).wrap_err("Error launching ship")
+            }
+        }
     }
 }
 
@@ -150,5 +200,22 @@ impl TravelMachine<Arrived> {
             ship,
             state: Arrived,
         }
+    }
+
+    pub async fn dock(mut self) -> Result<TravelMachine<Docked>> {
+        let res = fleet_api::dock_ship(&self.config, self.ship.symbol.as_str()).await?;
+        let ship_nav = ShipNav::from(res.data.nav);
+        if ship_nav.status != ShipNavStatus::Docked {
+            return Err(eyre::eyre!("Failed to dock ship!"));
+        }
+
+        self.ship.update_nav(ship_nav);
+        println!("Ship docked");
+
+        Ok(TravelMachine::<Docked>::new(
+            self.config,
+            self.destination,
+            self.ship,
+        ))
     }
 }
