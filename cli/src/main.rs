@@ -11,11 +11,14 @@ use tabled::Table;
 
 #[derive(Debug, Parser)]
 enum Command {
+    DB,
+    Up,
     GetAgent,
     Step,
     GetShips,
     Register,
     Status,
+    RefreshWaypoints,
 }
 
 #[derive(Debug, Parser)]
@@ -39,6 +42,8 @@ async fn main() -> Result<()> {
     let conf = apis::configuration::Configuration::new();
 
     match config.command {
+        Some(Command::DB) => repository::run().await,
+        Some(Command::Up) => migration::migrate().await,
         Some(Command::Status) => {
             let openapi_response = apis::default_api::get_status(&conf).await?;
             println!("{:#?}", openapi_response);
@@ -135,6 +140,58 @@ async fn main() -> Result<()> {
                             machine = machine.step().await?;
                         }
                     }
+                }
+            }
+            None => println!("No agent found. Please register first"),
+        },
+
+        Some(Command::RefreshWaypoints) => match agent_config {
+            Some(agent_config) => {
+                let api_config = get_authenticated_config(agent_config.token);
+                let loc = common::models::Location::from_str("X1-GQ23-H45")?;
+                let page = 1;
+                let limit = 20;
+
+                let res = apis::systems_api::get_system_waypoints(
+                    &api_config,
+                    loc.system_ident().as_str(),
+                    Some(page),
+                    Some(limit),
+                    None,
+                    None,
+                )
+                .await?;
+
+                let mut waypoints = res
+                    .data
+                    .into_iter()
+                    .map(|waypoint| common::models::Waypoint::from(waypoint))
+                    .collect::<Vec<common::models::Waypoint>>();
+
+                let total = res.meta.total;
+                let num_pages = (total as f32 / limit as f32).ceil() as i32;
+
+                for n in (page + 1)..=num_pages {
+                    let res = apis::systems_api::get_system_waypoints(
+                        &api_config,
+                        loc.system_ident().as_str(),
+                        Some(n),
+                        Some(limit),
+                        None,
+                        None,
+                    )
+                    .await?;
+
+                    for w in res.data {
+                        let waypoint = common::models::Waypoint::from(w);
+
+                        waypoints.push(waypoint)
+                    }
+                }
+
+                println!("Total waypoints: {}", res.meta.total);
+                for wp in waypoints {
+                    repository::insert_waypoint(&wp).await?;
                 }
             }
             None => println!("No agent found. Please register first"),

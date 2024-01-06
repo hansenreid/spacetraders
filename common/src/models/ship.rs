@@ -5,7 +5,7 @@ use tabled::Tabled;
 use time::format_description::well_known::Iso8601;
 use time::{Duration, OffsetDateTime};
 
-use super::{FactionSymbol, Location};
+use super::{location::WaypointType, FactionSymbol, Location};
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Tabled)]
 // TODO: Finish implementation
@@ -192,68 +192,6 @@ impl From<Box<openapi::models::ShipNavRouteWaypoint>> for ShipNavRouteWayPoint {
             x: value.x,
             y: value.y,
         }
-    }
-}
-
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Tabled)]
-pub enum WaypointType {
-    Planet,
-    GasGiant,
-    Moon,
-    OrbitalStation,
-    JumpGate,
-    AsteroidField,
-    Asteroid,
-    EngineeredAsteroid,
-    AsteroidBase,
-    Nebula,
-    DebrisField,
-    GravityWell,
-    ArtificialGravityWell,
-    FuelStation,
-}
-
-impl From<openapi::models::WaypointType> for WaypointType {
-    fn from(value: openapi::models::WaypointType) -> Self {
-        match value {
-            openapi::models::WaypointType::Planet => Self::Planet,
-            openapi::models::WaypointType::GasGiant => Self::GasGiant,
-            openapi::models::WaypointType::Moon => Self::Moon,
-            openapi::models::WaypointType::OrbitalStation => Self::OrbitalStation,
-            openapi::models::WaypointType::JumpGate => Self::JumpGate,
-            openapi::models::WaypointType::AsteroidField => Self::AsteroidField,
-            openapi::models::WaypointType::Asteroid => Self::Asteroid,
-            openapi::models::WaypointType::EngineeredAsteroid => Self::EngineeredAsteroid,
-            openapi::models::WaypointType::AsteroidBase => Self::AsteroidBase,
-            openapi::models::WaypointType::Nebula => Self::Nebula,
-            openapi::models::WaypointType::DebrisField => Self::DebrisField,
-            openapi::models::WaypointType::GravityWell => Self::GravityWell,
-            openapi::models::WaypointType::ArtificialGravityWell => Self::ArtificialGravityWell,
-            openapi::models::WaypointType::FuelStation => Self::FuelStation,
-        }
-    }
-}
-
-impl Display for WaypointType {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let string = match self {
-            WaypointType::Planet => "PLANET",
-            WaypointType::GasGiant => "GAS_GIANT",
-            WaypointType::Moon => "MOON",
-            WaypointType::OrbitalStation => "ORBITAL_STATION",
-            WaypointType::JumpGate => "JUMP_GATE",
-            WaypointType::AsteroidField => "ASTEROID_FIELD",
-            WaypointType::Asteroid => "ASTEROID",
-            WaypointType::EngineeredAsteroid => "ENGINEERED_ASTEROID",
-            WaypointType::AsteroidBase => "ASTEROID_BASE",
-            WaypointType::Nebula => "NEBULA",
-            WaypointType::DebrisField => "DEBRIS_FIELD",
-            WaypointType::GravityWell => "GRAVITY_WELL",
-            WaypointType::ArtificialGravityWell => "ARTIFICIAL_GRAVIY_WELL",
-            WaypointType::FuelStation => "FUEL_STATION",
-        };
-
-        write!(f, "{}", string)
     }
 }
 

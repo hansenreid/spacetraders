@@ -17,3 +17,6 @@
 
 # Agent config containg token
 agent.toml
+
+# sqlite database
+spacetraders-db.sqlite
