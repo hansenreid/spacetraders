@@ -11,8 +11,6 @@ use tabled::Table;
 
 #[derive(Debug, Parser)]
 enum Command {
-    DB,
-    Up,
     GetAgent,
     Step,
     GetShips,
@@ -42,8 +40,6 @@ async fn main() -> Result<()> {
     let conf = apis::configuration::Configuration::new();
 
     match config.command {
-        Some(Command::DB) => repository::run().await,
-        Some(Command::Up) => migration::migrate().await,
         Some(Command::Status) => {
             let openapi_response = apis::default_api::get_status(&conf).await?;
             println!("{:#?}", openapi_response);
@@ -190,9 +186,8 @@ async fn main() -> Result<()> {
                 }
 
                 println!("Total waypoints: {}", res.meta.total);
-                for wp in waypoints {
-                    repository::insert_waypoint(&wp).await?;
-                }
+                let db = repository::connect().await?;
+                repository::insert_waypoints(&db, waypoints).await?;
             }
             None => println!("No agent found. Please register first"),
         },

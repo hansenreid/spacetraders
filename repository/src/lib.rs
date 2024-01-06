@@ -1,5 +1,4 @@
 use eyre::{Ok, Result};
-use futures::executor::block_on;
 use sea_orm::*;
 
 pub mod entities;
@@ -12,22 +11,22 @@ pub async fn connect() -> Result<DatabaseConnection> {
     Ok(db)
 }
 
-pub async fn run() {
-    if let Err(err) = block_on(connect()) {
-        panic!("{}", err)
-    }
-}
+pub async fn insert_waypoints(
+    db: &DatabaseConnection,
+    waypoints: Vec<common::models::Waypoint>,
+) -> Result<()> {
+    let to_insert = waypoints
+        .into_iter()
+        .map(|w| waypoint::ActiveModel {
+            location: ActiveValue::Set(w.location.waypoint_ident()),
+            r#type: ActiveValue::Set(w.waypoint_type.to_string()),
+            x: ActiveValue::Set(w.x),
+            y: ActiveValue::Set(w.y),
+        })
+        .collect::<Vec<waypoint::ActiveModel>>();
 
-pub async fn insert_waypoint(waypoint: &common::models::Waypoint) -> Result<()> {
-    let entity = waypoint::ActiveModel {
-        location: ActiveValue::Set(waypoint.location.waypoint_ident()),
-        r#type: ActiveValue::Set(waypoint.waypoint_type.to_string()),
-        x: ActiveValue::Set(waypoint.x),
-        y: ActiveValue::Set(waypoint.y),
-    };
-
-    let db = connect().await?;
-    Waypoint::insert(entity).exec(&db).await?;
+    let res = Waypoint::insert_many(to_insert).exec(db).await?;
+    println!("Result: {:?}", res);
 
     Ok(())
 }
