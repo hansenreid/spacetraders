@@ -418,7 +418,6 @@ dependencies = [
  "inquire",
  "migration",
  "openapi",
- "repository",
  "serde",
  "serde_json",
  "tabled",
@@ -464,8 +463,11 @@ name = "common"
 version = "0.1.0"
 dependencies = [
  "eyre",
+ "futures",
  "openapi",
+ "sea-orm",
  "serde",
+ "serde_json",
  "tabled",
  "time",
  "tokio",
@@ -1782,20 +1784,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a2571463863a6bd50c32f94402933f03457a3fbaf697a707c5be741e459f08fd"
 dependencies = [
  "bytecheck",
-]
-
-[[package]]
-name = "repository"
-version = "0.1.0"
-dependencies = [
- "common",
- "eyre",
- "futures",
- "sea-orm",
- "serde",
- "serde_json",
- "time",
- "tokio",
 ]
 
 [[package]]

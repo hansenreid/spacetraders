@@ -8,7 +8,6 @@ edition = "2021"
 [dependencies]
 common = { path = "../common" }
 openapi = { path = "../openapi" }
-repository = { path = "../repository" }
 migration = { path = "../migration" }
 
 clap.workspace = true

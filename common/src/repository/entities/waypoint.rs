@@ -8,6 +8,7 @@ pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
     pub location: String,
     pub r#type: String,
+    pub traits: String,
     pub x: i32,
     pub y: i32,
 }

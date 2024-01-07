@@ -18,6 +18,7 @@ impl MigrationTrait for Migration {
                             .primary_key(),
                     )
                     .col(ColumnDef::new(Waypoint::Type).string().not_null())
+                    .col(ColumnDef::new(Waypoint::Traits).string().not_null())
                     .col(ColumnDef::new(Waypoint::X).integer().not_null())
                     .col(ColumnDef::new(Waypoint::Y).integer().not_null())
                     .to_owned(),
@@ -37,6 +38,7 @@ enum Waypoint {
     Table,
     Location,
     Type,
+    Traits,
     X,
     Y,
 }

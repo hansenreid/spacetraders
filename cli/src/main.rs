@@ -38,6 +38,7 @@ async fn main() -> Result<()> {
     let config: Config = clap::Parser::parse();
     let agent_config = get_conf()?;
     let conf = apis::configuration::Configuration::new();
+    let db = common::repository::connect().await?;
 
     match config.command {
         Some(Command::Status) => {
@@ -122,9 +123,13 @@ async fn main() -> Result<()> {
             Some(agent_config) => {
                 let api_config = get_authenticated_config(agent_config.token);
                 let dest = common::models::Location::from_str("X1-GQ23-H45")?;
-                let mut machine =
-                    common::machines::TravelMachineWrapper::new(api_config, dest, "NATINGAR2-3")
-                        .await?;
+                let mut machine = common::machines::TravelMachineWrapper::new(
+                    api_config,
+                    &db,
+                    dest,
+                    "NATINGAR2-3",
+                )
+                .await?;
 
                 loop {
                     match machine {
@@ -186,8 +191,7 @@ async fn main() -> Result<()> {
                 }
 
                 println!("Total waypoints: {}", res.meta.total);
-                let db = repository::connect().await?;
-                repository::insert_waypoints(&db, waypoints).await?;
+                common::repository::insert_waypoints(&db, waypoints).await?;
             }
             None => println!("No agent found. Please register first"),
         },

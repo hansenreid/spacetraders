@@ -3,21 +3,23 @@ use std::time::Duration;
 use eyre::{Context, Ok, Result};
 use openapi::apis::configuration::Configuration;
 use openapi::apis::fleet_api;
+use sea_orm::DatabaseConnection;
 
 use crate::models::ship::{ShipNav, ShipNavStatus};
 use crate::models::{Location, Ship};
 
-pub enum TravelMachineWrapper {
-    Docked(TravelMachine<Docked>),
-    InOrbit(TravelMachine<InOrbit>),
-    InTransit(TravelMachine<InTransit>),
-    Arrived(TravelMachine<Arrived>),
+pub enum TravelMachineWrapper<'a> {
+    Docked(TravelMachine<'a, Docked>),
+    InOrbit(TravelMachine<'a, InOrbit>),
+    InTransit(TravelMachine<'a, InTransit>),
+    Arrived(TravelMachine<'a, Arrived>),
     TravelComplete,
 }
 
-impl TravelMachineWrapper {
+impl<'a> TravelMachineWrapper<'a> {
     pub async fn new(
         config: Configuration,
+        db: &'a DatabaseConnection,
         destination: Location,
         ship_symbol: &str,
     ) -> Result<Self> {
@@ -31,6 +33,7 @@ impl TravelMachineWrapper {
                 } else {
                     Ok(Self::Docked(TravelMachine::<Docked>::new(
                         config,
+                        db,
                         destination,
                         ship,
                     )))
@@ -41,12 +44,14 @@ impl TravelMachineWrapper {
                 if ship.nav.location == destination {
                     Ok(Self::Arrived(TravelMachine::<Arrived>::new(
                         config,
+                        db,
                         destination,
                         ship,
                     )))
                 } else {
                     Ok(Self::InOrbit(TravelMachine::<InOrbit>::new(
                         config,
+                        db,
                         destination,
                         ship,
                     )))
@@ -56,6 +61,7 @@ impl TravelMachineWrapper {
             crate::models::ship::ShipNavStatus::InTransit => {
                 Ok(Self::InTransit(TravelMachine::<InTransit>::new(
                     config,
+                    db,
                     destination,
                     ship,
                 )))
@@ -97,25 +103,32 @@ impl TravelMachineWrapper {
     }
 }
 
-pub struct TravelMachine<S> {
+pub struct TravelMachine<'a, S> {
     pub state: S,
+    db: &'a DatabaseConnection,
     config: Configuration,
     destination: Location,
     ship: Ship,
 }
 
 pub struct Docked;
-impl TravelMachine<Docked> {
-    pub fn new(config: Configuration, destination: Location, ship: Ship) -> Self {
+impl<'a> TravelMachine<'a, Docked> {
+    pub fn new(
+        config: Configuration,
+        db: &'a DatabaseConnection,
+        destination: Location,
+        ship: Ship,
+    ) -> Self {
         Self {
             config,
+            db,
             destination,
             ship,
             state: Docked,
         }
     }
 
-    pub async fn undock(mut self) -> Result<TravelMachine<InOrbit>> {
+    pub async fn undock(mut self) -> Result<TravelMachine<'a, InOrbit>> {
         let res = fleet_api::orbit_ship(&self.config, self.ship.symbol.as_str())
             .await
             .wrap_err("Error undocking")?;
@@ -130,6 +143,7 @@ impl TravelMachine<Docked> {
 
         Ok(TravelMachine::<InOrbit>::new(
             self.config,
+            self.db,
             self.destination,
             self.ship,
         ))
@@ -137,20 +151,29 @@ impl TravelMachine<Docked> {
 }
 
 pub struct InOrbit;
-impl TravelMachine<InOrbit> {
-    pub fn new(config: Configuration, destination: Location, ship: Ship) -> Self {
+impl<'a> TravelMachine<'a, InOrbit> {
+    pub fn new(
+        config: Configuration,
+        db: &'a DatabaseConnection,
+        destination: Location,
+        ship: Ship,
+    ) -> Self {
         Self {
             config,
+            db,
             destination,
             ship,
             state: InOrbit,
         }
     }
 
-    pub async fn travel(mut self) -> Result<TravelMachine<InTransit>> {
+    pub async fn travel(mut self) -> Result<TravelMachine<'a, InTransit>> {
         let nav = openapi::models::navigate_ship_request::NavigateShipRequest {
             waypoint_symbol: self.destination.to_string(),
         };
+
+        let waypoints = crate::repository::get_marketplace_waypoints(self.db).await?;
+        println!("Waypoints Found: {}", waypoints.len());
 
         let res =
             fleet_api::navigate_ship(&self.config, self.ship.symbol.as_str(), Some(nav)).await;
@@ -167,6 +190,7 @@ impl TravelMachine<InOrbit> {
 
                 Ok(TravelMachine::<InTransit>::new(
                     self.config,
+                    self.db,
                     self.destination,
                     self.ship,
                 ))
@@ -180,10 +204,16 @@ impl TravelMachine<InOrbit> {
 }
 
 pub struct InTransit;
-impl TravelMachine<InTransit> {
-    pub fn new(config: Configuration, destination: Location, ship: Ship) -> Self {
+impl<'a> TravelMachine<'a, InTransit> {
+    pub fn new(
+        config: Configuration,
+        db: &'a DatabaseConnection,
+        destination: Location,
+        ship: Ship,
+    ) -> Self {
         Self {
             config,
+            db,
             destination,
             ship,
             state: InTransit,
@@ -192,17 +222,23 @@ impl TravelMachine<InTransit> {
 }
 
 pub struct Arrived;
-impl TravelMachine<Arrived> {
-    pub fn new(config: Configuration, destination: Location, ship: Ship) -> Self {
+impl<'a> TravelMachine<'a, Arrived> {
+    pub fn new(
+        config: Configuration,
+        db: &'a DatabaseConnection,
+        destination: Location,
+        ship: Ship,
+    ) -> Self {
         Self {
             config,
+            db,
             destination,
             ship,
             state: Arrived,
         }
     }
 
-    pub async fn dock(mut self) -> Result<TravelMachine<Docked>> {
+    pub async fn dock(mut self) -> Result<TravelMachine<'a, Docked>> {
         let res = fleet_api::dock_ship(&self.config, self.ship.symbol.as_str()).await?;
         let ship_nav = ShipNav::from(res.data.nav);
         if ship_nav.status != ShipNavStatus::Docked {
@@ -214,6 +250,7 @@ impl TravelMachine<Arrived> {
 
         Ok(TravelMachine::<Docked>::new(
             self.config,
+            self.db,
             self.destination,
             self.ship,
         ))

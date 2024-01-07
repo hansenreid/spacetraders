@@ -8,7 +8,7 @@ pub mod faction;
 pub use self::faction::FactionSymbol;
 
 pub mod location;
-pub use self::location::{Location, Waypoint, WaypointType};
+pub use self::location::{Location, Waypoint, WaypointTrait, WaypointTraitSymbol, WaypointType};
 
 pub mod ship;
 pub use self::ship::Ship;
