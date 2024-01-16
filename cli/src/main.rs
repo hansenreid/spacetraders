@@ -5,7 +5,7 @@ use std::{fs, vec};
 use clap::Parser;
 use eyre::{Ok, Result};
 use inquire::{Select, Text};
-use openapi::{apis, models};
+use openapi::apis;
 use serde::{Deserialize, Serialize};
 use tabled::Table;
 
@@ -14,9 +14,11 @@ enum Command {
     GetAgent,
     Step,
     GetShips,
-    Register,
+    InitManager,
     Status,
     RefreshWaypoints,
+    CrdGen,
+    Run,
 }
 
 #[derive(Debug, Parser)]
@@ -34,41 +36,30 @@ struct AgentConfig {
 #[tokio::main]
 async fn main() -> Result<()> {
     color_eyre::install()?;
+    tracing_subscriber::fmt::init();
 
     let config: Config = clap::Parser::parse();
     let agent_config = get_conf()?;
     let conf = apis::configuration::Configuration::new();
-    let db = common::repository::connect().await?;
 
     match config.command {
+        Some(Command::Run) => operator::run().await?,
+
+        Some(Command::CrdGen) => operator::crdgen()?,
+
         Some(Command::Status) => {
             let openapi_response = apis::default_api::get_status(&conf).await?;
             println!("{:#?}", openapi_response);
         }
 
-        Some(Command::Register) => {
+        Some(Command::InitManager) => {
             let symbol = Text::new("What is your agent symbol?").prompt()?;
 
             let faction_answer =
                 Select::new("Select a faction:", common::models::FactionSymbol::to_vec())
                     .prompt()?;
             let faction = common::models::FactionSymbol::from_str(faction_answer)?.into();
-
-            let req = models::RegisterRequest::new(faction, symbol);
-            let res = apis::default_api::register(&conf, Some(req)).await?;
-            write_conf(&res)?;
-
-            let agent = common::models::Agent::from(res.data.agent);
-            let agent_table = vec![agent];
-            let agent_table = Table::new(agent_table).to_string();
-            println!("\nAgent\n{}\n", agent_table);
-
-            let contract = common::models::Contract::from(res.data.contract);
-            let contract_table = vec![contract];
-            let contract_table = Table::new(contract_table).to_string();
-            println!("\nContract\n{}\n", contract_table);
-
-            println!("Registered successfully. Agent file has been updated")
+            operator::init_manager(symbol, faction).await?
         }
 
         Some(Command::GetAgent) => match agent_config {
@@ -122,6 +113,7 @@ async fn main() -> Result<()> {
         Some(Command::Step) => match agent_config {
             Some(agent_config) => {
                 let api_config = get_authenticated_config(agent_config.token);
+                let db = common::repository::connect().await?;
                 let dest = common::models::Location::from_str("X1-GQ23-H45")?;
                 let mut machine = common::machines::TravelMachineWrapper::new(
                     api_config,
@@ -191,6 +183,8 @@ async fn main() -> Result<()> {
                 }
 
                 println!("Total waypoints: {}", res.meta.total);
+
+                let db = common::repository::connect().await?;
                 common::repository::insert_waypoints(&db, waypoints).await?;
             }
             None => println!("No agent found. Please register first"),
@@ -221,16 +215,4 @@ fn get_authenticated_config(bearer_token: String) -> apis::configuration::Config
         bearer_access_token: Some(bearer_token),
         ..Default::default()
     }
-}
-
-fn write_conf(res: &models::Register201Response) -> Result<()> {
-    let file = Path::new("agent.toml");
-    let agent_config = AgentConfig {
-        token: res.data.token.clone(),
-        agent: res.data.agent.symbol.clone(),
-    };
-
-    let str = toml::to_string::<AgentConfig>(&agent_config)?;
-    fs::write(file, str)?;
-    Ok(())
 }

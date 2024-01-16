@@ -1,3 +1,4 @@
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use std::str::FromStr;
@@ -195,7 +196,7 @@ impl From<Box<openapi::models::ShipNavRouteWaypoint>> for ShipNavRouteWayPoint {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Tabled)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Tabled, JsonSchema)]
 pub enum ShipRole {
     Fabricator,
     Harvester,

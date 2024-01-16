@@ -1,10 +1,11 @@
 use openapi::models::FactionSymbol as ApiFaction;
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use std::str::FromStr;
 use tabled::Tabled;
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Tabled)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Tabled, JsonSchema)]
 pub enum FactionSymbol {
     Cosmic,
     Void,

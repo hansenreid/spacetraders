@@ -1,0 +1,25 @@
+apiVersion: k3d.io/v1alpha5
+kind: Simple
+metadata:
+  name: spacetraders
+servers: 1
+kubeAPI:
+  hostPort: '6444'
+network: spacetraders-k3d-network
+registries:
+  create:
+    name: registry.localhost
+    host: '0.0.0.0'
+    hostPort: '5006'
+    volumes:
+      - /home/reid/Dev/k3d_registry_cache:/var/lib/registry # persist registry data locally
+ports:
+  - port: 80:80
+    nodeFilters:
+      - loadbalancer
+  - port: 8080:8080
+    nodeFilters:
+      - loadbalancer
+  - port: 443:443
+    nodeFilters:
+      - loadbalancer
