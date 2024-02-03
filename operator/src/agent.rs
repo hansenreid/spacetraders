@@ -4,7 +4,7 @@ use std::time::Duration;
 use common::crds::{Agent as K8sAgent, AgentSpec, AgentStatus, Manager};
 use common::models::FactionSymbol;
 use futures::StreamExt;
-use kube::api::{ListParams, Patch, PatchParams};
+use kube::api::{Patch, PatchParams};
 use kube::core::ObjectMeta;
 use kube::runtime::controller::Action;
 use kube::runtime::Controller;
@@ -36,9 +36,9 @@ pub enum AgentError {
 }
 
 pub(crate) async fn run_controller(client: Client) -> eyre::Result<()> {
-    let manager = Api::<Manager>::all(client);
+    let agent = Api::<K8sAgent>::all(client);
 
-    Controller::new(manager.clone(), Default::default())
+    Controller::new(agent.clone(), Default::default())
         .run(reconcile, error_policy, Arc::new(()))
         .for_each(|_| futures::future::ready(()))
         .await;
@@ -46,24 +46,22 @@ pub(crate) async fn run_controller(client: Client) -> eyre::Result<()> {
     Ok(())
 }
 
-pub(crate) fn error_policy(_object: Arc<Manager>, _err: &AgentError, _ctx: Arc<()>) -> Action {
+pub(crate) fn error_policy(_object: Arc<K8sAgent>, _err: &AgentError, _ctx: Arc<()>) -> Action {
     Action::requeue(Duration::from_secs(5))
 }
 
-pub(crate) async fn reconcile(manager: Arc<Manager>, _ctx: Arc<()>) -> Result<Action, AgentError> {
+pub(crate) async fn reconcile(agent: Arc<K8sAgent>, _ctx: Arc<()>) -> Result<Action, AgentError> {
     info!("reconciling agent");
 
-    reconcile_token(manager.clone()).await?;
-    reconcile_starting_ships(manager.clone()).await?;
+    reconcile_token(agent.clone()).await?;
+    reconcile_starting_ships(agent.clone()).await?;
 
     info!("agent reconciled");
     Ok(Action::await_change())
 }
 
-async fn reconcile_token(manager: Arc<Manager>) -> Result<(), AgentError> {
+async fn reconcile_token(agent: Arc<K8sAgent>) -> Result<(), AgentError> {
     info!("reconciling token");
-
-    let agent = get_agent(manager).await?;
 
     if let None = agent.spec.token.clone() {
         let token = register_agent(agent.spec.symbol.clone(), agent.spec.faction.clone())
@@ -95,40 +93,29 @@ async fn reconcile_token(manager: Arc<Manager>) -> Result<(), AgentError> {
     Ok(())
 }
 
-async fn reconcile_starting_ships(manager: Arc<Manager>) -> Result<(), AgentError> {
+async fn reconcile_starting_ships(agent: Arc<K8sAgent>) -> Result<(), AgentError> {
     info!("reconciling starting ships");
-    let agent = get_agent(manager.clone()).await?;
+    let client = crate::get_client().await.unwrap();
+    let oref = agent.controller_owner_ref(&());
 
     let symbol = agent.spec.symbol.clone().to_uppercase();
     let command_ship = format!("{}-1", symbol);
-    patch_ship(manager.clone(), command_ship)
-        .await
-        .context(ShipPatchSnafu)?;
+    patch_ship(
+        client.clone(),
+        command_ship,
+        agent.namespace(),
+        oref.clone(),
+    )
+    .await
+    .context(ShipPatchSnafu)?;
 
     let satellite = format!("{}-2", symbol);
-    patch_ship(manager.clone(), satellite)
+    patch_ship(client, satellite, agent.namespace(), oref)
         .await
         .context(ShipPatchSnafu)?;
 
     info!("starting ships reconciled");
     Ok(())
-}
-
-pub(crate) async fn get_agent(manager: Arc<Manager>) -> Result<K8sAgent, AgentError> {
-    let client = crate::get_client().await.unwrap();
-    let agent_api: Api<K8sAgent> = Api::namespaced(client, manager.spec.namespace.clone().as_str());
-    let lp = ListParams::default();
-    let agents = agent_api.list(&lp).await.context(ListAgentSnafu)?.items;
-    match &agents[..] {
-        [a] => Ok(a.to_owned()),
-        [_, ..] => {
-            return TooManyAgentsSnafu {
-                num_agents: agents.len(),
-            }
-            .fail()
-        }
-        [] => return AgentNotFoundSnafu.fail(),
-    }
 }
 
 pub(crate) fn create_owned_agent(source: Arc<Manager>) -> K8sAgent {

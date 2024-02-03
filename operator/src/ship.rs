@@ -1,17 +1,22 @@
 use eyre::Result;
+use k8s_openapi::apimachinery::pkg::apis::meta::v1::OwnerReference;
 use kube::api::{Patch, PatchParams};
 use kube::core::ObjectMeta;
-use kube::{Api, Resource, ResourceExt};
-use std::sync::Arc;
+use kube::{Api, Client, ResourceExt};
 
-use common::crds::{Manager, Ship as K8sShip, ShipSpec, ShipStatus};
+use common::crds::{Ship as K8sShip, ShipSpec, ShipStatus};
 
-pub(crate) async fn patch_ship(manager: Arc<Manager>, symbol: String) -> Result<()> {
+pub(crate) async fn patch_ship(
+    client: Client,
+    symbol: String,
+    namespace: Option<String>,
+    oref: Option<OwnerReference>,
+) -> Result<()> {
+    let ns = namespace.unwrap_or("default".to_string());
     let serverside = PatchParams::apply("operator");
-    let client = crate::get_client().await.unwrap();
-    let ship_api: Api<K8sShip> = Api::namespaced(client, manager.spec.namespace.clone().as_str());
+    let ship_api: Api<K8sShip> = Api::namespaced(client, ns.as_str());
 
-    let ship = create_owned_ship(manager, symbol);
+    let ship = create_owned_ship(symbol, ns, oref);
 
     ship_api
         .patch(ship.name_any().as_str(), &serverside, &Patch::Apply(&ship))
@@ -24,16 +29,16 @@ pub(crate) async fn patch_ship(manager: Arc<Manager>, symbol: String) -> Result<
     Ok(())
 }
 
-fn create_owned_ship(manager: Arc<Manager>, symbol: String) -> K8sShip {
-    let oref = manager.controller_owner_ref(&()).unwrap();
+fn create_owned_ship(symbol: String, namespace: String, oref: Option<OwnerReference>) -> K8sShip {
     let name = symbol.to_lowercase();
     let spec = ShipSpec { symbol };
+    let owner_references = oref.map_or(None, |oref| Some(vec![oref]));
 
     K8sShip {
         metadata: ObjectMeta {
             name: Some(name),
-            namespace: Some(manager.spec.namespace.clone()),
-            owner_references: Some(vec![oref]),
+            namespace: Some(namespace),
+            owner_references,
             ..Default::default()
         },
         spec,
