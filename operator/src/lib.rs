@@ -1,9 +1,13 @@
+use std::sync::Arc;
+
 use common::crds::Manager;
 use eyre::{Context, Ok, Result};
 use k8s_openapi::api::core::v1::Namespace;
 use kube::api::PostParams;
 use kube::core::ObjectMeta;
 use kube::{Api, Client, Config, CustomResourceExt};
+use openapi::apis::configuration::Configuration;
+use tokio::sync::RwLock;
 use tokio::task::JoinSet;
 use tracing::info;
 
@@ -13,6 +17,11 @@ mod ship;
 
 pub use manager::init_manager;
 
+use crate::agent::AgentControllerData;
+use crate::ship::ShipControllerData;
+
+type ApiConfig = Arc<RwLock<Option<Configuration>>>;
+
 async fn get_client() -> Result<Client> {
     let config = Config::infer().await?;
     Client::try_from(config).wrap_err("error creating k8s client")
@@ -21,11 +30,15 @@ async fn get_client() -> Result<Client> {
 pub async fn run() -> Result<()> {
     info!("Running operator");
     let client = get_client().await?;
+    let api_config = Arc::new(RwLock::new(None));
+    let agent_data = AgentControllerData::new(client.clone(), api_config.clone());
+    let ship_data = ShipControllerData::new(client.clone(), api_config.clone());
 
     let mut set = JoinSet::new();
 
     set.spawn(manager::run_controller(client.clone()));
-    set.spawn(agent::run_controller(client.clone()));
+    set.spawn(agent::run_controller(Arc::new(agent_data)));
+    set.spawn(ship::run_controller(Arc::new(ship_data)));
 
     while let Some(result) = set.join_next().await {
         let _ = result?;
