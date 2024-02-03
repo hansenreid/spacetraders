@@ -29,7 +29,7 @@ pub enum ManagerError {
     AgentStatusPatchError { source: kube::Error },
 }
 
-pub(crate) async fn run_controller(client: Client) -> Result<Action, ManagerError> {
+pub(crate) async fn run_controller(client: Client) -> eyre::Result<()> {
     let manager = Api::<Manager>::all(client);
 
     Controller::new(manager.clone(), Default::default())
@@ -37,7 +37,7 @@ pub(crate) async fn run_controller(client: Client) -> Result<Action, ManagerErro
         .for_each(|_| futures::future::ready(()))
         .await;
 
-    Ok(Action::await_change())
+    Ok(())
 }
 
 pub(crate) fn error_policy(_object: Arc<Manager>, _err: &ManagerError, _ctx: Arc<()>) -> Action {

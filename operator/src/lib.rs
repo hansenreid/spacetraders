@@ -4,6 +4,7 @@ use k8s_openapi::api::core::v1::Namespace;
 use kube::api::PostParams;
 use kube::core::ObjectMeta;
 use kube::{Api, Client, Config, CustomResourceExt};
+use tokio::task::JoinSet;
 use tracing::info;
 
 mod agent;
@@ -20,7 +21,15 @@ async fn get_client() -> Result<Client> {
 pub async fn run() -> Result<()> {
     info!("Running operator");
     let client = get_client().await?;
-    manager::run_controller(client).await?;
+
+    let mut set = JoinSet::new();
+
+    set.spawn(manager::run_controller(client.clone()));
+    set.spawn(agent::run_controller(client.clone()));
+
+    while let Some(result) = set.join_next().await {
+        let _ = result?;
+    }
 
     Ok(())
 }
