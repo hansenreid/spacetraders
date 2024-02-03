@@ -4,7 +4,6 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::models::faction::FactionSymbol;
-use crate::models::ship::ShipRole;
 
 #[derive(Deserialize, CustomResource, Serialize, Clone, Debug, JsonSchema)]
 #[kube(
@@ -47,7 +46,6 @@ pub struct AgentStatus {
 #[kube(status = "ShipStatus")]
 pub struct ShipSpec {
     pub symbol: String,
-    pub ship_type: ShipRole,
 }
 
 #[derive(Deserialize, Serialize, Clone, Debug, JsonSchema)]

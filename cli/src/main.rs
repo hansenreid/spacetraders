@@ -8,6 +8,7 @@ use inquire::{Select, Text};
 use openapi::apis;
 use serde::{Deserialize, Serialize};
 use tabled::Table;
+use tracing_subscriber::{prelude::__tracing_subscriber_SubscriberExt, util::SubscriberInitExt};
 
 #[derive(Debug, Parser)]
 enum Command {
@@ -36,7 +37,14 @@ struct AgentConfig {
 #[tokio::main]
 async fn main() -> Result<()> {
     color_eyre::install()?;
-    tracing_subscriber::fmt::init();
+
+    tracing_subscriber::registry()
+        .with(
+            tracing_subscriber::EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| "info,".into()),
+        )
+        .with(tracing_subscriber::fmt::layer())
+        .init();
 
     let config: Config = clap::Parser::parse();
     let agent_config = get_conf()?;

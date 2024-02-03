@@ -1,37 +1,26 @@
 use common::crds::Manager;
 use eyre::{Context, Ok, Result};
-use futures::StreamExt;
-use kube::runtime::Controller;
-use kube::CustomResourceExt;
-use kube::{Api, Client, Config};
-use snafu::Snafu;
-use std::sync::Arc;
+use k8s_openapi::api::core::v1::Namespace;
+use kube::api::PostParams;
+use kube::core::ObjectMeta;
+use kube::{Api, Client, Config, CustomResourceExt};
 use tracing::info;
 
 mod agent;
+mod manager;
 mod ship;
 
-mod reconcile;
-pub use reconcile::init_manager;
-
-#[derive(Debug, Snafu)]
-pub enum Error {}
+pub use manager::init_manager;
 
 async fn get_client() -> Result<Client> {
     let config = Config::infer().await?;
-    assert!(config.cluster_url.to_string() == "https://0.0.0.0:6444/");
     Client::try_from(config).wrap_err("error creating k8s client")
 }
 
 pub async fn run() -> Result<()> {
     info!("Running operator");
     let client = get_client().await?;
-    let manager = Api::<Manager>::all(client);
-
-    Controller::new(manager.clone(), Default::default())
-        .run(reconcile::reconcile, reconcile::error_policy, Arc::new(()))
-        .for_each(|_| futures::future::ready(()))
-        .await;
+    manager::run_controller(client).await?;
 
     Ok(())
 }
@@ -52,6 +41,24 @@ pub fn crdgen() -> Result<()> {
     let ship_yaml = serde_yaml::to_string(&ship_crd)?;
     print!("{}", ship_yaml);
     println!("---");
+
+    Ok(())
+}
+
+pub(crate) async fn create_namespace(name: &str) -> Result<()> {
+    let ns = Namespace {
+        metadata: ObjectMeta {
+            namespace: Some(name.into()),
+            name: Some(name.into()),
+            ..Default::default()
+        },
+        spec: None,
+        status: None,
+    };
+
+    let client = crate::get_client().await?;
+    let ns_api: Api<Namespace> = Api::all(client);
+    ns_api.create(&PostParams::default(), &ns).await?;
 
     Ok(())
 }

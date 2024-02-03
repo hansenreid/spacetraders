@@ -6,47 +6,23 @@ use eyre::Result;
 use kube::api::{ListParams, Patch, PatchParams};
 use kube::core::ObjectMeta;
 use kube::{Api, Resource, ResourceExt};
-use serde_json::json;
 use tracing::info;
 
-pub(crate) async fn reconcile_agent(manager: Arc<Manager>) -> Result<()> {
-    info!("Reconciling agent");
+use crate::ship::patch_ship;
 
-    let serverside = PatchParams::apply("operator");
-    let client = crate::get_client().await.unwrap();
-    let agent_api: Api<K8sAgent> = Api::namespaced(client, manager.spec.namespace.clone().as_str());
+pub(crate) async fn reconcile(manager: Arc<Manager>) -> Result<()> {
+    info!("reconciling agent");
 
-    let lp = ListParams::default();
-    let agents = agent_api.list(&lp).await?.items;
-    let new_agent = create_owned_agent(manager.clone());
-    let agent = match &agents[..] {
-        [_] => return Ok(()),
-        [] => &new_agent,
-        [_, ..] => return Err(eyre::eyre!("multiple agents found")),
-    };
+    reconcile_token(manager.clone()).await?;
+    reconcile_starting_ships(manager.clone()).await?;
 
-    agent_api
-        .patch(
-            manager.name_any().as_str(),
-            &serverside,
-            &Patch::Apply(&agent),
-        )
-        .await?;
-
-    agent_api
-        .patch_status(
-            manager.name_any().as_str(),
-            &serverside,
-            &Patch::Apply(&agent),
-        )
-        .await?;
-
-    info!("agent {} reconciled", agent.name_any());
+    info!("agent reconciled");
     Ok(())
 }
 
-pub(crate) async fn reconcile_token(manager: Arc<Manager>) -> Result<()> {
+async fn reconcile_token(manager: Arc<Manager>) -> Result<()> {
     info!("reconciling token");
+
     let agent = get_agent(manager).await?;
 
     if let None = agent.spec.token.clone() {
@@ -76,22 +52,18 @@ pub(crate) async fn reconcile_token(manager: Arc<Manager>) -> Result<()> {
     Ok(())
 }
 
-pub(crate) async fn patch_status(manager: Arc<Manager>, agent_status: &AgentStatus) -> Result<()> {
-    let client = crate::get_client().await.unwrap();
-    let agent_api: Api<K8sAgent> = Api::namespaced(client, manager.spec.namespace.clone().as_str());
+async fn reconcile_starting_ships(manager: Arc<Manager>) -> Result<()> {
+    info!("reconciling starting ships");
+    let agent = get_agent(manager.clone()).await?;
 
-    let status = json!({
-        "status": agent_status
-    });
+    let symbol = agent.spec.symbol.clone().to_uppercase();
+    let command_ship = format!("{}-1", symbol);
+    patch_ship(manager.clone(), command_ship).await?;
 
-    agent_api
-        .patch_status(
-            manager.name_any().as_str(),
-            &PatchParams::default(),
-            &Patch::Merge(&status),
-        )
-        .await?;
+    let satellite = format!("{}-2", symbol);
+    patch_ship(manager.clone(), satellite).await?;
 
+    info!("starting ships reconciled");
     Ok(())
 }
 
@@ -107,7 +79,7 @@ pub(crate) async fn get_agent(manager: Arc<Manager>) -> Result<K8sAgent> {
     }
 }
 
-fn create_owned_agent(source: Arc<Manager>) -> K8sAgent {
+pub(crate) fn create_owned_agent(source: Arc<Manager>) -> K8sAgent {
     let oref = source.controller_owner_ref(&()).unwrap();
     let spec = AgentSpec {
         symbol: source.spec.symbol.clone(),
