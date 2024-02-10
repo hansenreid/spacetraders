@@ -7,6 +7,7 @@ license = "No Permission"
 edition = "2018"
 
 [dependencies]
+governor.workspace = true 
 serde.workspace = true
 serde_derive.workspace = true
 serde_json.workspace = true

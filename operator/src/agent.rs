@@ -11,7 +11,7 @@ use kube::runtime::Controller;
 use kube::{Api, Client, Resource, ResourceExt};
 use openapi::apis::configuration::Configuration;
 use snafu::{ResultExt, Snafu};
-use tracing::info;
+use tracing::{info, warn};
 
 use crate::ship::patch_ship;
 
@@ -63,9 +63,10 @@ pub(crate) async fn run_controller(data: Arc<AgentControllerData>) -> eyre::Resu
 
 pub(crate) fn error_policy(
     _object: Arc<K8sAgent>,
-    _err: &AgentError,
+    err: &AgentError,
     _ctx: Arc<AgentControllerData>,
 ) -> Action {
+    warn!("{}", err);
     Action::requeue(Duration::from_secs(5))
 }
 
@@ -126,7 +127,6 @@ async fn reconcile_token(
 }
 
 fn get_authenticated_config(bearer_token: String) -> Configuration {
-    info!("setting bearer token: {}", bearer_token.clone());
     Configuration {
         bearer_access_token: Some(bearer_token),
         ..Default::default()

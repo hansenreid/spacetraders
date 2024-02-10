@@ -74,6 +74,10 @@ pub async fn accept_contract(
     };
 
     let local_var_req = local_var_req_builder.build()?;
+    if let Some(lim) = local_var_configuration.rate_limiter.clone() {
+        lim.until_ready().await;
+    }
+
     let local_var_resp = local_var_client.execute(local_var_req).await?;
 
     let local_var_status = local_var_resp.status();
@@ -121,6 +125,10 @@ pub async fn deliver_contract(
     local_var_req_builder = local_var_req_builder.json(&deliver_contract_request);
 
     let local_var_req = local_var_req_builder.build()?;
+    if let Some(lim) = local_var_configuration.rate_limiter.clone() {
+        lim.until_ready().await;
+    }
+
     let local_var_resp = local_var_client.execute(local_var_req).await?;
 
     let local_var_status = local_var_resp.status();
@@ -166,6 +174,10 @@ pub async fn fulfill_contract(
     };
 
     let local_var_req = local_var_req_builder.build()?;
+    if let Some(lim) = local_var_configuration.rate_limiter.clone() {
+        lim.until_ready().await;
+    }
+
     let local_var_resp = local_var_client.execute(local_var_req).await?;
 
     let local_var_status = local_var_resp.status();
@@ -211,6 +223,10 @@ pub async fn get_contract(
     };
 
     let local_var_req = local_var_req_builder.build()?;
+    if let Some(lim) = local_var_configuration.rate_limiter.clone() {
+        lim.until_ready().await;
+    }
+
     let local_var_resp = local_var_client.execute(local_var_req).await?;
 
     let local_var_status = local_var_resp.status();
@@ -261,6 +277,10 @@ pub async fn get_contracts(
     };
 
     let local_var_req = local_var_req_builder.build()?;
+    if let Some(lim) = local_var_configuration.rate_limiter.clone() {
+        lim.until_ready().await;
+    }
+
     let local_var_resp = local_var_client.execute(local_var_req).await?;
 
     let local_var_status = local_var_resp.status();

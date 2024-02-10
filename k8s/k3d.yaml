@@ -13,6 +13,17 @@ network: spacetraders-k3d-network
 #     hostPort: '5006'
 #     volumes:
 #       - /home/reid/Dev/k3d_registry_cache:/var/lib/registry # persist registry data locally
+# options:
+#   k3d:
+#     wait: true
+#   k3s: 
+#     extraArgs:
+#       - arg: --tls-san=127.0.0.1
+#         nodeFilters:
+#           - loadbalancer
+#       - arg: --disable=traefik
+#         nodeFilters:
+#           - loadbalancer
 ports:
   - port: 80:80
     nodeFilters:

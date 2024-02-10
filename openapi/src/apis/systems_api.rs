@@ -105,6 +105,10 @@ pub async fn get_construction(
     };
 
     let local_var_req = local_var_req_builder.build()?;
+    if let Some(lim) = local_var_configuration.rate_limiter.clone() {
+        lim.until_ready().await;
+    }
+
     let local_var_resp = local_var_client.execute(local_var_req).await?;
 
     let local_var_status = local_var_resp.status();
@@ -152,6 +156,10 @@ pub async fn get_jump_gate(
     };
 
     let local_var_req = local_var_req_builder.build()?;
+    if let Some(lim) = local_var_configuration.rate_limiter.clone() {
+        lim.until_ready().await;
+    }
+
     let local_var_resp = local_var_client.execute(local_var_req).await?;
 
     let local_var_status = local_var_resp.status();
@@ -199,6 +207,10 @@ pub async fn get_market(
     };
 
     let local_var_req = local_var_req_builder.build()?;
+    if let Some(lim) = local_var_configuration.rate_limiter.clone() {
+        lim.until_ready().await;
+    }
+
     let local_var_resp = local_var_client.execute(local_var_req).await?;
 
     let local_var_status = local_var_resp.status();
@@ -246,6 +258,10 @@ pub async fn get_shipyard(
     };
 
     let local_var_req = local_var_req_builder.build()?;
+    if let Some(lim) = local_var_configuration.rate_limiter.clone() {
+        lim.until_ready().await;
+    }
+
     let local_var_resp = local_var_client.execute(local_var_req).await?;
 
     let local_var_status = local_var_resp.status();
@@ -291,6 +307,10 @@ pub async fn get_system(
     };
 
     let local_var_req = local_var_req_builder.build()?;
+    if let Some(lim) = local_var_configuration.rate_limiter.clone() {
+        lim.until_ready().await;
+    }
+
     let local_var_resp = local_var_client.execute(local_var_req).await?;
 
     let local_var_status = local_var_resp.status();
@@ -356,6 +376,10 @@ pub async fn get_system_waypoints(
     };
 
     let local_var_req = local_var_req_builder.build()?;
+    if let Some(lim) = local_var_configuration.rate_limiter.clone() {
+        lim.until_ready().await;
+    }
+
     let local_var_resp = local_var_client.execute(local_var_req).await?;
 
     let local_var_status = local_var_resp.status();
@@ -406,6 +430,10 @@ pub async fn get_systems(
     };
 
     let local_var_req = local_var_req_builder.build()?;
+    if let Some(lim) = local_var_configuration.rate_limiter.clone() {
+        lim.until_ready().await;
+    }
+
     let local_var_resp = local_var_client.execute(local_var_req).await?;
 
     let local_var_status = local_var_resp.status();
@@ -453,6 +481,10 @@ pub async fn get_waypoint(
     };
 
     let local_var_req = local_var_req_builder.build()?;
+    if let Some(lim) = local_var_configuration.rate_limiter.clone() {
+        lim.until_ready().await;
+    }
+
     let local_var_resp = local_var_client.execute(local_var_req).await?;
 
     let local_var_status = local_var_resp.status();
@@ -502,6 +534,10 @@ pub async fn supply_construction(
     local_var_req_builder = local_var_req_builder.json(&supply_construction_request);
 
     let local_var_req = local_var_req_builder.build()?;
+    if let Some(lim) = local_var_configuration.rate_limiter.clone() {
+        lim.until_ready().await;
+    }
+
     let local_var_resp = local_var_client.execute(local_var_req).await?;
 
     let local_var_status = local_var_resp.status();
