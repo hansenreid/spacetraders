@@ -12,6 +12,8 @@ pub use self::location::{Location, Waypoint, WaypointTrait, WaypointTraitSymbol,
 
 pub mod ship;
 pub use self::ship::Ship;
+pub use self::ship::ShipNavFlightMode;
+pub use self::ship::ShipNavStatus;
 
 use std::fmt::Display;
 

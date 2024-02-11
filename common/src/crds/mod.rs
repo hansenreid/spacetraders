@@ -3,7 +3,7 @@ use kube::CustomResource;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::models::faction::FactionSymbol;
+use crate::models::{self, faction::FactionSymbol};
 
 #[derive(Deserialize, CustomResource, Serialize, Clone, Debug, JsonSchema)]
 #[kube(
@@ -50,6 +50,10 @@ pub struct ShipSpec {
 
 #[derive(Deserialize, Serialize, Clone, Debug, JsonSchema)]
 pub struct ShipStatus {
-    pub checksum: String,
-    pub last_updated: Option<DateTime<Utc>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub location: Option<models::Location>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub status: Option<models::ShipNavStatus>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub flight_mode: Option<models::ShipNavFlightMode>,
 }

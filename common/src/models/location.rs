@@ -1,9 +1,10 @@
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use std::str::FromStr;
 use tabled::Tabled;
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Tabled)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Tabled, JsonSchema)]
 pub struct Location {
     pub sector: String,
     pub system: String,

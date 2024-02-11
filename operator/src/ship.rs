@@ -1,6 +1,7 @@
 use std::sync::Arc;
 use std::time::Duration;
 
+use common::models::ship::Ship;
 use eyre::Result;
 use futures::StreamExt;
 use k8s_openapi::apimachinery::pkg::apis::meta::v1::OwnerReference;
@@ -11,7 +12,10 @@ use kube::runtime::Controller;
 use kube::{Api, Client, ResourceExt};
 
 use common::crds::{Ship as K8sShip, ShipSpec, ShipStatus};
-use snafu::{ensure, Snafu};
+use openapi::apis;
+use openapi::apis::fleet_api::{self, GetMyShipError};
+use serde_json::json;
+use snafu::{ensure, ResultExt, Snafu};
 use tracing::{info, warn};
 
 pub struct ShipControllerData {
@@ -32,6 +36,12 @@ impl ShipControllerData {
 pub enum ShipError {
     #[snafu(display("api config is not available yet"))]
     ApiConfigNotAvailable,
+
+    #[snafu(display("error received from fleet api {}", source))]
+    GetShipError { source: apis::Error<GetMyShipError> },
+
+    #[snafu(display("error patching ship {}", source))]
+    PatchShipError { source: kube::Error },
 }
 
 pub(crate) async fn run_controller(data: Arc<ShipControllerData>) -> eyre::Result<()> {
@@ -55,15 +65,41 @@ pub(crate) fn error_policy(
 }
 
 pub(crate) async fn reconcile(
-    ship: Arc<K8sShip>,
+    k8s_ship: Arc<K8sShip>,
     ctx: Arc<ShipControllerData>,
 ) -> Result<Action, ShipError> {
-    info!("Reconciling ships");
+    info!("Reconciling ship {}", k8s_ship.name_any());
 
     let cfg = ctx.api_config.read().await;
     ensure!(cfg.is_some(), ApiConfigNotAvailableSnafu);
+    let cfg = cfg.as_ref().unwrap();
 
-    info!("ship {} reconciled", ship.name_any());
+    let res = fleet_api::get_my_ship(cfg, k8s_ship.spec.symbol.as_str())
+        .await
+        .context(GetShipSnafu)?;
+
+    let ship = Ship::from(res.data);
+    let ns = k8s_ship.namespace().unwrap_or("default".to_string());
+    let ship_api: Api<K8sShip> = Api::namespaced(ctx.k8s_client.clone(), ns.as_str());
+
+    let status = json!({
+        "status": ShipStatus {
+            location: Some(ship.nav.location),
+            status: Some(ship.nav.status),
+            flight_mode: Some(ship.nav.flight_mode) }
+    });
+
+    let serverside = PatchParams::apply("operator");
+    ship_api
+        .patch_status(
+            k8s_ship.name_any().as_str(),
+            &serverside,
+            &Patch::Merge(&status),
+        )
+        .await
+        .context(PatchShipSnafu)?;
+
+    info!("ship {} reconciled", k8s_ship.name_any());
     Ok(Action::await_change())
 }
 
@@ -83,10 +119,6 @@ pub(crate) async fn patch_ship(
         .patch(ship.name_any().as_str(), &serverside, &Patch::Apply(&ship))
         .await?;
 
-    ship_api
-        .patch_status(ship.name_any().as_str(), &serverside, &Patch::Apply(&ship))
-        .await?;
-
     Ok(())
 }
 
@@ -104,8 +136,9 @@ fn create_owned_ship(symbol: String, namespace: String, oref: Option<OwnerRefere
         },
         spec,
         status: Some(ShipStatus {
-            checksum: "".into(),
-            last_updated: None,
+            location: None,
+            status: None,
+            flight_mode: None,
         }),
     }
 }

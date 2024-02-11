@@ -84,7 +84,7 @@ impl From<Box<openapi::models::ShipNav>> for ShipNav {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Tabled)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Tabled, JsonSchema)]
 pub enum ShipNavFlightMode {
     Drift,
     Stealth,
@@ -283,7 +283,7 @@ impl FromStr for ShipRole {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Tabled)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Tabled, JsonSchema)]
 pub enum ShipNavStatus {
     InTransit,
     InOrbit,
