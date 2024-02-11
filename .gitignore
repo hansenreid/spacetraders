@@ -19,4 +19,5 @@
 agent.toml
 
 # sqlite database
+/db
 spacetraders-db.sqlite

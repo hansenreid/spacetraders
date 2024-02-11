@@ -6,6 +6,11 @@ servers: 1
 kubeAPI:
   hostPort: '6444'
 network: spacetraders-k3d-network
+volumes:
+  - volume: /home/reid/Dev/personal/spacetraders/db:/spacetraders/db
+    nodeFilters:
+      - server:0
+      - agent:*
 # registries:
 #   create:
 #     name: registry.localhost

@@ -45,3 +45,10 @@ spec:
       containers:
       - name: spacetraders 
         image: spacetraders 
+        volumeMounts:
+          - mountPath: /data/db
+            name: db
+      volumes:
+        - hostPath:
+            path: /spacetraders/db
+          name: db
