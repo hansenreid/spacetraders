@@ -14,6 +14,7 @@ pub mod ship;
 pub use self::ship::Ship;
 pub use self::ship::ShipNavFlightMode;
 pub use self::ship::ShipNavStatus;
+pub use self::ship::ShipRole;
 
 use std::fmt::Display;
 

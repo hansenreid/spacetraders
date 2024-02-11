@@ -46,6 +46,8 @@ pub struct AgentStatus {
 #[kube(status = "ShipStatus")]
 pub struct ShipSpec {
     pub symbol: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub role: Option<models::ShipRole>,
 }
 
 #[derive(Deserialize, Serialize, Clone, Debug, JsonSchema)]

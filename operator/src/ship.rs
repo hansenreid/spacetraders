@@ -6,6 +6,7 @@ use eyre::Result;
 use futures::StreamExt;
 use k8s_openapi::apimachinery::pkg::apis::meta::v1::OwnerReference;
 use kube::api::{Patch, PatchParams};
+use kube::core::object::HasSpec;
 use kube::core::ObjectMeta;
 use kube::runtime::controller::Action;
 use kube::runtime::Controller;
@@ -80,7 +81,23 @@ pub(crate) async fn reconcile(
 
     let ship = Ship::from(res.data);
     let ns = k8s_ship.namespace().unwrap_or("default".to_string());
+    let serverside = PatchParams::apply("operator");
     let ship_api: Api<K8sShip> = Api::namespaced(ctx.k8s_client.clone(), ns.as_str());
+
+    if let None = k8s_ship.spec().role {
+        let spec = json!({
+            "spec": ShipSpec {role:Some(ship.registration.role), symbol: ship.symbol }
+        });
+
+        ship_api
+            .patch(
+                k8s_ship.name_any().as_str(),
+                &serverside,
+                &Patch::Merge(spec),
+            )
+            .await
+            .context(PatchShipSnafu)?;
+    }
 
     let status = json!({
         "status": ShipStatus {
@@ -89,7 +106,6 @@ pub(crate) async fn reconcile(
             flight_mode: Some(ship.nav.flight_mode) }
     });
 
-    let serverside = PatchParams::apply("operator");
     ship_api
         .patch_status(
             k8s_ship.name_any().as_str(),
@@ -124,7 +140,7 @@ pub(crate) async fn patch_ship(
 
 fn create_owned_ship(symbol: String, namespace: String, oref: Option<OwnerReference>) -> K8sShip {
     let name = symbol.to_lowercase();
-    let spec = ShipSpec { symbol };
+    let spec = ShipSpec { symbol, role: None };
     let owner_references = oref.map_or(None, |oref| Some(vec![oref]));
 
     K8sShip {
