@@ -59,3 +59,20 @@ pub struct ShipStatus {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub flight_mode: Option<models::ShipNavFlightMode>,
 }
+
+#[derive(Deserialize, CustomResource, Serialize, Clone, Debug, JsonSchema)]
+#[kube(
+    kind = "PurchaseOrder",
+    group = "spacetraders.io",
+    version = "v1",
+    namespaced
+)]
+#[kube(status = "PurchaseOrderStatus")]
+pub struct PurchaseOrderSpec {
+    pub location: models::Location,
+}
+
+#[derive(Deserialize, Serialize, Clone, Debug, JsonSchema)]
+pub struct PurchaseOrderStatus {
+    pub complete: bool,
+}
