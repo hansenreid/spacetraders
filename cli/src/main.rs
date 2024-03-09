@@ -51,7 +51,7 @@ async fn main() -> Result<()> {
     let conf = apis::configuration::Configuration::new();
 
     match config.command {
-        Some(Command::Run) => operator::run().await?,
+        Some(Command::Run) => commander::run().await?,
 
         Some(Command::CrdGen) => operator::crdgen()?,
 
@@ -146,58 +146,57 @@ async fn main() -> Result<()> {
             None => println!("No agent found. Please register first"),
         },
 
-        Some(Command::RefreshWaypoints) => match agent_config {
-            Some(agent_config) => {
-                let api_config = get_authenticated_config(agent_config.token);
-                let loc = common::models::Location::from_str("X1-GQ23-H45")?;
-                let page = 1;
-                let limit = 20;
-
-                let res = apis::systems_api::get_system_waypoints(
-                    &api_config,
-                    loc.system_ident().as_str(),
-                    Some(page),
-                    Some(limit),
-                    None,
-                    None,
-                )
-                .await?;
-
-                let mut waypoints = res
-                    .data
-                    .into_iter()
-                    .map(|waypoint| common::models::Waypoint::from(waypoint))
-                    .collect::<Vec<common::models::Waypoint>>();
-
-                let total = res.meta.total;
-                let num_pages = (total as f32 / limit as f32).ceil() as i32;
-
-                for n in (page + 1)..=num_pages {
-                    let res = apis::systems_api::get_system_waypoints(
-                        &api_config,
-                        loc.system_ident().as_str(),
-                        Some(n),
-                        Some(limit),
-                        None,
-                        None,
-                    )
-                    .await?;
-
-                    for w in res.data {
-                        let waypoint = common::models::Waypoint::from(w);
-
-                        waypoints.push(waypoint)
-                    }
-                }
-
-                println!("Total waypoints: {}", res.meta.total);
-
-                let db = common::repository::connect().await?;
-                common::repository::insert_waypoints(&db, waypoints).await?;
-            }
-            None => println!("No agent found. Please register first"),
-        },
-
+        Some(Command::RefreshWaypoints) => {} //match agent_config {
+        // Some(agent_config) => {
+        //     let api_config = get_authenticated_config(agent_config.token);
+        //     let loc = common::models::Location::from_str("X1-GQ23-H45")?;
+        //     let page = 1;
+        //     let limit = 20;
+        //
+        //     let res = apis::systems_api::get_system_waypoints(
+        //         &api_config,
+        //         loc.system_ident().as_str(),
+        //         Some(page),
+        //         Some(limit),
+        //         None,
+        //         None,
+        //     )
+        //     .await?;
+        //
+        //     let mut waypoints = res
+        //         .data
+        //         .into_iter()
+        //         .map(|waypoint| common::models::Waypoint::from(waypoint))
+        //         .collect::<Vec<common::models::Waypoint>>();
+        //
+        //     let total = res.meta.total;
+        //     let num_pages = (total as f32 / limit as f32).ceil() as i32;
+        //
+        //     for n in (page + 1)..=num_pages {
+        //         let res = apis::systems_api::get_system_waypoints(
+        //             &api_config,
+        //             loc.system_ident().as_str(),
+        //             Some(n),
+        //             Some(limit),
+        //             None,
+        //             None,
+        //         )
+        //         .await?;
+        //
+        //         for w in res.data {
+        //             let waypoint = common::models::Waypoint::from(w);
+        //
+        //             waypoints.push(waypoint)
+        //         }
+        //     }
+        //
+        //     println!("Total waypoints: {}", res.meta.total);
+        //
+        //     let db = common::repository::connect().await?;
+        //     common::repository::insert_waypoints(&db, waypoints).await?;
+        // }
+        // None => println!("No agent found. Please register first"),
+        // },
         None => {
             println!("No command provided")
         }

@@ -2,7 +2,7 @@
 resolver = "2"
 
 default-members = ["cli"]
-members = ["cli", "common", "migration", "openapi", "operator"]
+members = ["agent", "cli", "commander", "common", "openapi", "operator"]
 
 [workspace.package]
 authors = ["Reid Hansen"]
@@ -11,6 +11,8 @@ edition = "2021"
 
 
 [workspace.dependencies]
+anyhow = "1.0.80"
+chrono = { version = "0.4.35", features = ["serde"] }
 clap = { version = "4.4.11", features = ["derive", "env", "string"] }
 color-eyre = "0.6.2"
 eyre = "0.6.11"
@@ -31,12 +33,22 @@ sea-orm = { version = "^0.12.0", features = [
     "with-uuid",
     "mock",
 ] }
+
+sqlx = { version = "0.7", features = [
+    "chrono",
+    "macros",
+    "migrate",
+    "runtime-tokio",
+    "sqlite",
+    "tls-rustls",
+] }
 serde = { version = "1.0.193", features = ["derive"] }
 serde_derive = "^1.0"
 serde_json = "1.0"
 serde_yaml = "0.9.30"
 snafu = "0.8.0"
 tabled = "0.15.0"
+thiserror = "1.0.57"
 time = { version = "0.3.31", features = [
     "macros",
     "parsing",
@@ -45,6 +57,6 @@ time = { version = "0.3.31", features = [
 tokio = { version = "1", features = ["full"] }
 toml = "0.8.8"
 tracing = "0.1"
-tracing-subscriber = "0.3"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 url = "^2.2"
 uuid = { version = "^1.0", features = ["serde", "v4"] }

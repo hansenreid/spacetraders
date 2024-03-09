@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": " INSERT INTO agents\n            (account_id,\n             symbol,\n             headquarters,\n             credits,\n             starting_faction,\n             ship_count,\n             token,\n             created_at,\n             updated_at)\nVALUES      (?1,\n             ?2,\n             ?3,\n             ?4,\n             ?5,\n             ?6,\n             ?7,\n             CURRENT_TIMESTAMP,\n             CURRENT_TIMESTAMP)\n            \n",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 7
+    },
+    "nullable": []
+  },
+  "hash": "a9fc3d31f4f036b5c48561033358fc1e2f79016146fe5d5ace18f7cd765fa7c9"
+}

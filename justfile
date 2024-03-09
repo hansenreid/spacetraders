@@ -5,9 +5,12 @@ default: (cli "--help")
 cli command:
  @cargo run -- {{command}}
 
+run: 
+ @cargo run -- run
+
 apply-crd: (cli "crd-gen | kubectl apply --context='k3d-spacetraders' -f -")
 
-init-cluster: create-cluster apply-crd
+init-cluster: create-cluster 
 
 create-cluster:
  @k3d cluster create --config k8s/k3d.yaml

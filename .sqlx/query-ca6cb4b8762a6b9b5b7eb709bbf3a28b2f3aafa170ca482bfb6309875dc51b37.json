@@ -1,0 +1,68 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT * FROM agents LIMIT 1;\n",
+  "describe": {
+    "columns": [
+      {
+        "name": "account_id",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "symbol",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "headquarters",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "credits",
+        "ordinal": 3,
+        "type_info": "Int64"
+      },
+      {
+        "name": "starting_faction",
+        "ordinal": 4,
+        "type_info": "Text"
+      },
+      {
+        "name": "ship_count",
+        "ordinal": 5,
+        "type_info": "Int64"
+      },
+      {
+        "name": "token",
+        "ordinal": 6,
+        "type_info": "Text"
+      },
+      {
+        "name": "created_at",
+        "ordinal": 7,
+        "type_info": "Datetime"
+      },
+      {
+        "name": "updated_at",
+        "ordinal": 8,
+        "type_info": "Datetime"
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      true,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "ca6cb4b8762a6b9b5b7eb709bbf3a28b2f3aafa170ca482bfb6309875dc51b37"
+}
