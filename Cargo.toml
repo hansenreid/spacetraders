@@ -2,7 +2,7 @@
 resolver = "2"
 
 default-members = ["cli"]
-members = ["agent", "cli", "commander", "common", "openapi", "operator"]
+members = ["agent", "cli", "commander", "common", "navigation", "openapi", "operator"]
 
 [workspace.package]
 authors = ["Reid Hansen"]

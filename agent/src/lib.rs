@@ -53,13 +53,12 @@ async fn fetch_agent(pool: &SqlitePool) -> Result<Agent, sqlx::Error> {
 }
 
 async fn create_agent(pool: &SqlitePool) -> Result<Agent, AgentError> {
-    let res = register_agent("Natingar".into(), FactionSymbol::Cosmic)
+    let res = register_agent("Natingar3".into(), FactionSymbol::Cosmic)
         .await
         .map_err(|err| AgentError::RegistrationError(err))?;
     let agent = res.agent;
 
-    sqlx::query_file_as!(
-        Agent,
+    sqlx::query_file!(
         "src/insert_one.sql",
         agent.account_id,
         agent.symbol,

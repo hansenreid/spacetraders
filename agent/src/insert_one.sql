@@ -16,5 +16,5 @@ VALUES      (?1,
              ?6,
              ?7,
              CURRENT_TIMESTAMP,
-             CURRENT_TIMESTAMP)
+             CURRENT_TIMESTAMP);
             

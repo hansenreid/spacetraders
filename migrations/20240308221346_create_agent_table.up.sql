@@ -1,6 +1,6 @@
  CREATE TABLE IF NOT EXISTS agents (
     account_id TEXT,
-    symbol TEXT NOT NULL,
+    symbol TEXT PRIMARY KEY NOT NULL,
     headquarters TEXT NOT NULL,
     credits INTEGER NOT NULL,
     starting_faction TEXT NOT NULL,

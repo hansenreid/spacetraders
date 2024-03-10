@@ -496,6 +496,7 @@ dependencies = [
  "agent",
  "common",
  "eyre",
+ "navigation",
  "openapi",
  "serde",
  "serde_json",
@@ -1611,6 +1612,21 @@ dependencies = [
  "security-framework",
  "security-framework-sys",
  "tempfile",
+]
+
+[[package]]
+name = "navigation"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "eyre",
+ "openapi",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "thiserror",
+ "tokio",
+ "tracing",
 ]
 
 [[package]]

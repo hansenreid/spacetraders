@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO waypoints (\n    location,\n    waypoint_type,\n    traits,\n    x,\n    y\n) VALUES (\n    ?1,\n    ?2,\n    ?3,\n    ?4,\n    ?5\n);\n",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 5
+    },
+    "nullable": []
+  },
+  "hash": "7f589cc8d091b588eb9e5f38e7e6711119af6e36f81a4b9cff95ba2b33a3247c"
+}
